@@ -1,12 +1,14 @@
 # 🔄 Proxy Scraper & Validator | Парсер и Валидатор Прокси
 
 ![License](https://img.shields.io/badge/License-Custom-red?style=flat-square)
+![Последнее обновление](https://img.shields.io/github/last-commit/SublimateTheBerry/FreeProxiesListSTB.svg)
 
-Мощный инструмент для автоматического сбора и проверки прокси с поддержкой:
-- **4 типа прокси**: HTTP(S), SOCKS4/5
-- ⚡ Асинхронная обработка
-- 🤖 Авто-обновление каждые 15 минут
-- 📁 Сохранение в 5 файлов
+## 📥 Прямые ссылки
+- **HTTP**: [HTTP.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTP.txt)
+- **HTTPS**: [HTTPS.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTPS.txt)
+- **SOCKS4**: [Socks4.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/Socks4.txt)
+- **SOCKS5**: [Socks5.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/Socks5.txt)
+- **All Proxies**: [All.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/All.txt)
 
 ## 📜 Лицензия
 Используя этот репозиторий, вы автоматически соглашаетесь:
