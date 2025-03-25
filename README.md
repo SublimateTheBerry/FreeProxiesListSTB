@@ -1,12 +1,14 @@
 # 🔄 Proxy Scraper & Validator 
 
 ![License](https://img.shields.io/badge/License-Custom-red?style=flat-square)
+![Last Updated](https://img.shields.io/github/last-commit/SublimateTheBerry/FreeProxiesListSTB.svg)
 
-Advanced proxy scraping solution featuring:
-- **4 Proxy Types**: HTTP(S), SOCKS4/5
-- ⚡ Async Processing
-- 🤖 Auto-Update Every 15min
-- 📁 5 Organized Outputs
+## 📥 Direct Downloads
+- **HTTP**: [HTTP.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTP.txt)
+- **HTTPS**: [HTTPs.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTPS.txt)
+- **SOCKS4**: [Socks4.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/Socks4.txt)
+- **SOCKS5**: [Socks5.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/Socks5.txt)
+- **All Proxies**: [All.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/All.txt)
 
 ## 📜 License 
 By using this repository, you automatically agree:
