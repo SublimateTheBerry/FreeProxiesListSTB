@@ -5,7 +5,7 @@
 
 ## 📥 Direct Downloads
 - **HTTP**: [HTTP.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTP.txt)
-- **HTTPS**: [HTTPs.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTPS.txt)
+- **HTTPS**: [HTTPS.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/HTTPS.txt)
 - **SOCKS4**: [Socks4.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/Socks4.txt)
 - **SOCKS5**: [Socks5.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/Socks5.txt)
 - **All Proxies**: [All.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/All.txt)
