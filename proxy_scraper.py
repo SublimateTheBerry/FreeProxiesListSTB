@@ -18,15 +18,10 @@ OUTPUT_FILES = {
 
 
 async def fetch_proxies():
-    """Собирает прокси со всех источников."""
+    """Собирает прокси со всех источников (JSON и TXT)."""
     proxies = set()
     async with aiohttp.ClientSession() as session:
-        tasks = []
-        for url in PROXY_SOURCES:
-            url = url.strip()
-            if url:
-                tasks.append(download_proxies(session, url))
-        
+        tasks = [download_proxies(session, url) for url in PROXY_SOURCES if url.strip()]
         results = await asyncio.gather(*tasks)
         for res in results:
             proxies.update(res)
@@ -35,14 +30,40 @@ async def fetch_proxies():
 
 
 async def download_proxies(session, url):
-    """Загружает список прокси с одного источника."""
+    """Загружает список прокси с одного источника (поддержка JSON и TXT)."""
     try:
         async with session.get(url, timeout=10) as response:
             if response.status == 200:
-                return set(response.text.strip().split("\n"))
+                content = await response.text()
+
+                # Пробуем парсить как JSON
+                try:
+                    json_data = await response.json()
+                    if "data" in json_data:
+                        return parse_json_proxies(json_data["data"])
+                except:
+                    pass  # Не JSON, пробуем как текст
+
+                return set(content.strip().split("\n"))
+
     except Exception as e:
         print(f"Ошибка при загрузке {url}: {e}")
     return set()
+
+
+def parse_json_proxies(data):
+    """Парсит JSON-ответ в список прокси."""
+    proxies = set()
+    for item in data:
+        ip = item.get("ip")
+        port = item.get("port")
+        protocols = item.get("protocols", [])
+        if ip and port:
+            for protocol in protocols:
+                protocol = protocol.upper()  # Делаем SOCKS4, HTTP и т.д.
+                if protocol in OUTPUT_FILES:
+                    proxies.add(f"{ip}:{port}")
+    return proxies
 
 
 async def check_proxy(session, proxy):
