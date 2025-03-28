@@ -21,8 +21,6 @@ async def fetch_proxies():
     if not sources:
         print("⚠️ No proxy sources configured!")
         return []
-
-    print(f"🔄 Fetching proxies from {len(sources)} sources...")
     
     async with aiohttp.ClientSession() as session:
         tasks = [download_proxies(session, url) for url in sources]
@@ -35,7 +33,6 @@ async def fetch_proxies():
 
 async def download_proxies(session, url):
     try:
-        print(f"⏬ Downloading from {url}")
         async with session.get(url, timeout=15) as response:
             if response.status == 200:
                 content_type = response.headers.get('Content-Type', '')
