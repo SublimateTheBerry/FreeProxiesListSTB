@@ -1,7 +1,9 @@
 import os
 import asyncio
 import aiohttp
-from aiohttp_socks import SocksConnector
+from aiohttp_socks import ProxyConnector, ProxyType
+from aiohttp import BasicAuth
+import re
 
 PROXY_SOURCES = os.getenv("PROXY_SOURCES", "").split(",")
 PROXY_TIMEOUT = 5
@@ -28,7 +30,7 @@ async def fetch_proxies():
         for res in results:
             proxies.update(res)
 
-    print(f"✅ Total {len(proxies)} proxies found")
+    print(f"✅ Found {len(proxies)} proxies")
     return list(proxies)
 
 async def download_proxies(session, url):
@@ -42,13 +44,17 @@ async def download_proxies(session, url):
                         json_data = await response.json()
                         return parse_json_proxies(json_data)
                     except Exception as e:
-                        print(f"⚠️ JSON parse error in {url}: {e}")
+                        print(f"⚠️ JSON parsing error in {url}: {e}")
                 
                 text_data = await response.text()
                 return set(line.strip() for line in text_data.splitlines() if line.strip())
 
+    except aiohttp.ClientTimeout:
+        print(f"⚠️ Timeout loading {url}")
+    except aiohttp.ClientConnectionError:
+        print(f"⚠️ Connection error for {url}")
     except Exception as e:
-        print(f"⚠️ Error loading {url}: {str(e)[:100]}")
+        print(f"⚠️ Unexpected error loading {url}: {e}")
     return set()
 
 def parse_json_proxies(data):
@@ -84,6 +90,11 @@ def parse_json_proxies(data):
     return proxies
 
 async def check_proxy(session, proxy):
+    proxy_pattern = re.compile(r"^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d+$")
+    if not proxy_pattern.match(proxy):
+        print(f"⚠️ Invalid proxy format: {proxy}")
+        return [], None
+
     test_proxies = {
         "HTTP": f"http://{proxy}",
         "HTTPS": f"http://{proxy}",
@@ -91,33 +102,40 @@ async def check_proxy(session, proxy):
         "SOCKS5": f"socks5://{proxy}",
     }
 
+    working_protocols = []
     for ptype, purl in test_proxies.items():
         try:
             connector = None
             if ptype.startswith("SOCKS"):
-                connector = SocksConnector.from_url(purl)
+                connector = ProxyConnector.from_url(purl)
                 test_session = aiohttp.ClientSession(connector=connector)
             else:
                 test_session = session
 
-            async with test_session.get(
-                TEST_URL,
-                timeout=PROXY_TIMEOUT,
-                ssl=False
-            ) as response:
-                if response.status == 200:
-                    data = await response.json()
-                    if "origin" in data:
-                        print(f"✅ Working {ptype} proxy: {proxy}")
-                        return ptype, proxy
-        except Exception as e:
+            if "@" in proxy:
+                auth, ip_port = proxy.split("@")
+                username, password = auth.split(":")
+                proxy_url = f"{ptype.lower()}://{ip_port}"
+                auth = BasicAuth(username, password)
+                async with test_session.get(TEST_URL, proxy=proxy_url, proxy_auth=auth, timeout=PROXY_TIMEOUT) as response:
+                    if response.status == 200 and "origin" in await response.json():
+                        working_protocols.append(ptype)
+            else:
+                async with test_session.get(TEST_URL, proxy=purl, timeout=PROXY_TIMEOUT) as response:
+                    if response.status == 200 and "origin" in await response.json():
+                        working_protocols.append(ptype)
+        except Exception:
             pass
         finally:
             if connector:
                 await test_session.close()
 
-    print(f"❌ Proxy {proxy} failed all checks")
-    return None, None
+    if working_protocols:
+        print(f"✅ Working proxy: {proxy} (protocols: {', '.join(working_protocols)})")
+        return working_protocols, proxy
+    else:
+        print(f"❌ Proxy {proxy} failed all checks")
+        return [], None
 
 async def sort_and_save_proxies(proxies):
     sorted_proxies = {key: set() for key in OUTPUT_FILES.keys()}
@@ -131,10 +149,11 @@ async def sort_and_save_proxies(proxies):
     for result in results:
         if isinstance(result, Exception):
             continue
-        ptype, proxy = result
-        if ptype and proxy:
+        ptypes, proxy = result
+        if ptypes and proxy:
             sorted_proxies["ALL"].add(proxy)
-            sorted_proxies[ptype].add(proxy)
+            for ptype in ptypes:
+                sorted_proxies[ptype].add(proxy)
 
     for key, filename in OUTPUT_FILES.items():
         count = len(sorted_proxies[key])
