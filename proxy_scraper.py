@@ -4,10 +4,12 @@ import aiohttp
 from aiohttp_socks import ProxyConnector, ProxyType
 from aiohttp import BasicAuth
 import re
+from bs4 import BeautifulSoup
+import requests
 
-PROXY_SOURCES = os.getenv("PROXY_SOURCES", "").split(",")
 PROXY_TIMEOUT = 5
 TEST_URL = "https://httpbin.org/ip"
+PROXY_SOURCES = os.getenv("PROXY_SOURCES", "").split(",")
 
 OUTPUT_FILES = {
     "ALL": "All.txt",
@@ -17,20 +19,44 @@ OUTPUT_FILES = {
     "SOCKS5": "Socks5.txt",
 }
 
+async def search_duckduckgo():
+    proxies = set()
+    query = f"free proxy list {datetime.now().year} site:*.org | site:*.net | site:*.com -inurl:(signup | login)"
+    url = f"https://duckduckgo.com/html/?q={query}"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"}
+    
+    try:
+        response = requests.get(url, headers=headers, timeout=15)
+        soup = BeautifulSoup(response.text, "html.parser")
+        links = [a["href"] for a in soup.select(".result__url")[:10]]
+        print(f"🔍 Found {len(links)} DuckDuckGo search results")
+        
+        async with aiohttp.ClientSession() as session:
+            tasks = [download_proxies(session, link) for link in links]
+            results = await asyncio.gather(*tasks)
+            for res in results:
+                proxies.update(res)
+    except Exception as e:
+        print(f"⚠️ Error searching DuckDuckGo: {e}")
+    
+    return proxies
+
 async def fetch_proxies():
     proxies = set()
-    sources = [url.strip() for url in PROXY_SOURCES if url.strip()]
-    if not sources:
-        print("⚠️ No proxy sources configured!")
-        return []
     
-    async with aiohttp.ClientSession() as session:
-        tasks = [download_proxies(session, url) for url in sources]
-        results = await asyncio.gather(*tasks)
-        for res in results:
-            proxies.update(res)
-
-    print(f"✅ Found {len(proxies)} proxies")
+    sources = [url.strip() for url in PROXY_SOURCES if url.strip()]
+    if sources:
+        async with aiohttp.ClientSession() as session:
+            tasks = [download_proxies(session, url) for url in sources]
+            results = await asyncio.gather(*tasks)
+            for res in results:
+                proxies.update(res)
+        print(f"✅ Collected {len(proxies)} proxies from fixed sources")
+    
+    duckduckgo_proxies = await search_duckduckgo()
+    proxies.update(duckduckgo_proxies)
+    
+    print(f"✅ Total found {len(proxies)} unique proxies")
     return list(proxies)
 
 async def download_proxies(session, url):
@@ -47,7 +73,8 @@ async def download_proxies(session, url):
                         print(f"⚠️ JSON parsing error in {url}: {e}")
                 
                 text_data = await response.text()
-                return set(line.strip() for line in text_data.splitlines() if line.strip())
+                found = set(re.findall(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}:\d{1,5}\b", text_data))
+                return found
 
     except aiohttp.ClientTimeout:
         print(f"⚠️ Timeout loading {url}")
@@ -173,4 +200,5 @@ async def main():
     print("🎉 Done!")
 
 if __name__ == "__main__":
+    from datetime import datetime
     asyncio.run(main())
