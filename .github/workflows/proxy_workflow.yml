@@ -2,7 +2,7 @@ name: Proxy Scraper & Sorter
 
 on:
   schedule:
-    - cron: "*/15 * * * *"
+    - cron: "*/30 * * * *"
   workflow_dispatch:
 
 jobs:
@@ -15,7 +15,7 @@ jobs:
       - name: Install dependencies
         run: |
           python3 -m pip install --upgrade pip
-          pip install aiohttp aiohttp-socks
+          pip install aiohttp aiohttp_socks requests beautifulsoup4
 
       - name: Run parser
         env:
