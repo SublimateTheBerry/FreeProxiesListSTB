@@ -40,7 +40,6 @@ USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 YaBrowser/24.3.2.700 Yowser/2.5 Safari/537.36",
     "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
 ]
-
 OUTPUT_FILES = {
     "ALL": "All.txt",
     "HTTP": "HTTP.txt",
@@ -176,19 +175,16 @@ async def fetch_proxies():
             for res in results:
                 proxies.update(res)
             print(f"✅ Collected {len(proxies)} proxies from sources")
-        
         search_tasks = [
             asyncio.wait_for(search_duckduckgo(session), timeout=30),
             asyncio.wait_for(search_google(session), timeout=30),
             asyncio.wait_for(search_yandex(session), timeout=30)
         ]
         search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
-        
         for result in search_results:
             if isinstance(result, Exception):
                 continue
             proxies.update(result)
-        
         proxies = list({proxy.split('@')[-1] if '@' in proxy else proxy for proxy in proxies})
         print(f"✅ Total unique proxies: {len(proxies)}")
         return proxies
@@ -258,11 +254,18 @@ async def check_proxy(session, proxy):
 async def sort_and_save_proxies(proxies):
     sorted_proxies = {k: set() for k in OUTPUT_FILES}
     async with aiohttp.ClientSession() as session:
-        tasks = []
-        for proxy in proxies:
-            tasks.append(check_proxy(session, proxy))
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for result in results:
+        tasks = [check_proxy(session, proxy) for proxy in proxies]
+        primary_results = await asyncio.gather(*tasks, return_exceptions=True)
+        
+        valid_proxies = []
+        for result in primary_results:
+            if not isinstance(result, Exception) and result[0]:
+                valid_proxies.append(result[1])
+                
+        secondary_tasks = [check_proxy(session, proxy) for proxy in valid_proxies]
+        secondary_results = await asyncio.gather(*secondary_tasks, return_exceptions=True)
+        
+        for result in secondary_results:
             if isinstance(result, Exception):
                 continue
             protocols, proxy_str = result
@@ -270,11 +273,13 @@ async def sort_and_save_proxies(proxies):
                 sorted_proxies["ALL"].add(proxy_str)
                 for proto in protocols:
                     sorted_proxies[proto].add(proxy_str)
+    
     for key, filename in OUTPUT_FILES.items():
         proxies_list = sorted(sorted_proxies[key])
         with open(filename, 'w') as f:
             f.write('\n'.join(proxies_list))
         print(f"💾 Saved {len(proxies_list)} {key} proxies to {filename}")
+    
     with open('new_proxies_count.tmp', 'w') as f:
         f.write(str(len(sorted_proxies["ALL"])))
 
