@@ -1,14 +1,54 @@
 from datetime import datetime
 import re
 
+def read_file_content(filename):
+    with open(filename, 'r', encoding='utf-8') as f:
+        return f.read()
+
+def write_file_content(filename, content):
+    with open(filename, 'w', encoding='utf-8') as f:
+        f.write(content)
+
+def update_readme(filename, stats):
+    content = read_file_content(filename)
+
+    content = re.sub(
+        r'{{\s*new_proxies_count\s*}}',
+        str(stats['new_proxies_count']),
+        content
+    )
+    content = re.sub(
+        r'{{\s*last_update_time\s*}}',
+        stats['last_update_time'],
+        content
+    )
+    content = re.sub(
+        r'{{\s*http_count\s*}}',
+        str(stats['http_count']),
+        content
+    )
+    content = re.sub(
+        r'{{\s*https_count\s*}}',
+        str(stats['https_count']),
+        content
+    )
+    content = re.sub(
+        r'{{\s*socks4_count\s*}}',
+        str(stats['socks4_count']),
+        content
+    )
+    content = re.sub(
+        r'{{\s*socks5_count\s*}}',
+        str(stats['socks5_count']),
+        content
+    )
+    
+    write_file_content(filename, content)
+
 def get_stats():
     stats = {
         'new_proxies_count': 0,
         'last_update_time': datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC'),
-        'http_count': 0,
-        'https_count': 0,
-        'socks4_count': 0,
-        'socks5_count': 0,
     }
 
     for proto in ['HTTP', 'HTTPS', 'Socks4', 'Socks5']:
@@ -22,40 +62,15 @@ def get_stats():
         with open('new_proxies_count.tmp', 'r') as f:
             stats['new_proxies_count'] = int(f.read().strip())
     except:
-        pass
+        stats['new_proxies_count'] = 0
 
     return stats
-
-def update_file(filename, patterns):
-    with open(filename, 'r', encoding='utf-8') as f:
-        content = f.read()
-
-    for pattern, value in patterns.items():
-        content = re.sub(pattern, str(value), content)
-
-    with open(filename, 'w', encoding='utf-8') as f:
-        f.write(content)
 
 def main():
     stats = get_stats()
 
-    update_file('README.md', {
-        r'{{ new_proxies_count }}': stats['new_proxies_count'],
-        r'{{ last_update_time }}': stats['last_update_time'],
-        r'{{ http_count }}': stats['http_count'],
-        r'{{ https_count }}': stats['https_count'],
-        r'{{ socks4_count }}': stats['socks4_count'],
-        r'{{ socks5_count }}': stats['socks5_count'],
-    })
-
-    update_file('README_ru.md', {
-        r'{{ new_proxies_count }}': stats['new_proxies_count'],
-        r'{{ last_update_time }}': stats['last_update_time'],
-        r'{{ http_count }}': stats['http_count'],
-        r'{{ https_count }}': stats['https_count'],
-        r'{{ socks4_count }}': stats['socks4_count'],
-        r'{{ socks5_count }}': stats['socks5_count'],
-    })
+    update_readme('README.md', stats.copy())
+    update_readme('README_ru.md', stats.copy())
 
 if __name__ == '__main__':
     main()
