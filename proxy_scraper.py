@@ -13,7 +13,6 @@ from datetime import datetime
 PROXY_TIMEOUT = 10
 TEST_URL = "https://httpbin.org/ip"
 PROXY_SOURCES = os.getenv("PROXY_SOURCES", "").split(",")
-
 USER_AGENTS = [
     "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Safari/605.1.15",
@@ -75,15 +74,15 @@ async def search_duckduckgo(session):
     try:
         headers = get_random_headers()
         await asyncio.sleep(random.uniform(1, 3))
-        response = await session.get(url, headers=headers, timeout=15)
-        response.raise_for_status()
-        soup = BeautifulSoup(await response.text(), "html.parser")
-        links = [a["href"] for a in soup.select("a.result__url")[:10]]
-        print(f"🔍 Found {len(links)} DuckDuckGo links")
-        tasks = [download_proxies(session, link) for link in links]
-        results = await asyncio.gather(*tasks)
-        for res in results:
-            proxies.update(res)
+        async with session.get(url, headers=headers, timeout=15) as response:
+            response.raise_for_status()
+            soup = BeautifulSoup(await response.text(), "html.parser")
+            links = [a["href"] for a in soup.select("a.result__url")[:10]]
+            print(f"🔍 Found {len(links)} DuckDuckGo links")
+            tasks = [download_proxies(session, link) for link in links]
+            results = await asyncio.gather(*tasks)
+            for res in results:
+                proxies.update(res)
     except Exception as e:
         print(f"⚠️ DuckDuckGo error: {e}")
     return proxies
@@ -103,20 +102,20 @@ async def search_google(session):
     try:
         headers = get_random_headers()
         await asyncio.sleep(random.uniform(1, 3))
-        response = await session.get(
+        async with session.get(
             url,
             params=params,
             headers=headers,
             timeout=15
-        )
-        response.raise_for_status()
-        soup = BeautifulSoup(await response.text(), "html.parser")
-        links = [a["href"] for a in soup.select("a.yuRUbf")[:10]]
-        print(f"🔍 Found {len(links)} Google links")
-        tasks = [download_proxies(session, link) for link in links]
-        results = await asyncio.gather(*tasks)
-        for res in results:
-            proxies.update(res)
+        ) as response:
+            response.raise_for_status()
+            soup = BeautifulSoup(await response.text(), "html.parser")
+            links = [a["href"] for a in soup.select("a.yuRUbf")[:10]]
+            print(f"🔍 Found {len(links)} Google links")
+            tasks = [download_proxies(session, link) for link in links]
+            results = await asyncio.gather(*tasks)
+            for res in results:
+                proxies.update(res)
     except Exception as e:
         print(f"⚠️ Google error: {e}")
     return proxies
@@ -135,25 +134,25 @@ async def search_yandex(session):
     try:
         headers = get_random_headers()
         await asyncio.sleep(random.uniform(1, 3))
-        response = await session.get(
+        async with session.get(
             url,
             params=params,
             headers=headers,
             timeout=15,
             allow_redirects=False
-        )
-        if response.status in [302, 403] or "captcha" in response.url:
-            print("⚠️ Yandex is blocking the request, retrying...")
-            await asyncio.sleep(10)
-            return await search_yandex(session)
-        response.raise_for_status()
-        soup = BeautifulSoup(await response.text(), "html.parser")
-        links = [a["href"] for a in soup.select(".link__url")[:10]]
-        print(f"🔍 Found {len(links)} Yandex links")
-        tasks = [download_proxies(session, link) for link in links]
-        results = await asyncio.gather(*tasks)
-        for res in results:
-            proxies.update(res)
+        ) as response:
+            if response.status in [302, 403] or "captcha" in response.url:
+                print("⚠️ Yandex is blocking the request, retrying...")
+                await asyncio.sleep(10)
+                return await search_yandex(session)
+            response.raise_for_status()
+            soup = BeautifulSoup(await response.text(), "html.parser")
+            links = [a["href"] for a in soup.select(".link__url")[:10]]
+            print(f"🔍 Found {len(links)} Yandex links")
+            tasks = [download_proxies(session, link) for link in links]
+            results = await asyncio.gather(*tasks)
+            for res in results:
+                proxies.update(res)
     except Exception as e:
         print(f"⚠️ Yandex error: {e}")
     return proxies
@@ -167,16 +166,19 @@ async def fetch_proxies():
             for res in results:
                 proxies.update(res)
             print(f"✅ Collected {len(proxies)} proxies from sources")
+        
         search_tasks = [
-            search_duckduckgo(session),
-            search_google(session),
-            search_yandex(session)
+            asyncio.wait_for(search_duckduckgo(session), timeout=30),
+            asyncio.wait_for(search_google(session), timeout=30),
+            asyncio.wait_for(search_yandex(session), timeout=30)
         ]
         search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
+        
         for result in search_results:
             if isinstance(result, Exception):
                 continue
             proxies.update(result)
+        
         print(f"✅ Total unique proxies: {len(proxies)}")
         return list(proxies)
 
