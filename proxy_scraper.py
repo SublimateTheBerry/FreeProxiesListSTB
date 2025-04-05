@@ -188,7 +188,7 @@ async def sort_and_save_proxies(proxies):
         with open(filename, "w") as f:
             f.write("\n".join(sorted(sorted_proxies[key])))
             
-    with open('new_proxies_count.txt', 'w') as f:
+    with open('new_proxies_count.tmp', 'w') as f:
         f.write(str(len(sorted_proxies["ALL"])))
     
     print("✅ All proxies processed!")
