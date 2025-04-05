@@ -125,43 +125,53 @@ async def search_yandex(session):
     query = "free proxy list -site:signup -site:login"
     params = {
         "text": query.replace(" ", "+"),
-        "numdoc": "10",
+        "numdoc": "50",
         "lr": random.choice(["1", "2", "3"]),
-        "p": random.randint(0, 50),
+        "p": random.randint(0, 100),
         "msid": f"yandex_search_{int(time.time())}"
     }
     url = "https://yandex.ru/search/"
-    try:
-        headers = get_random_headers()
-        await asyncio.sleep(random.uniform(1, 3))
-        async with session.get(
-            url,
-            params=params,
-            headers=headers,
-            timeout=15,
-            allow_redirects=False
-        ) as response:
-            if response.status in [302, 403] or "captcha" in response.url:
-                print("⚠️ Yandex is blocking the request, retrying...")
-                await asyncio.sleep(10)
-                return await search_yandex(session)
-            response.raise_for_status()
-            soup = BeautifulSoup(await response.text(), "html.parser")
-            links = [a["href"] for a in soup.select(".link__url")[:10]]
-            print(f"🔍 Found {len(links)} Yandex links")
-            tasks = [download_proxies(session, link) for link in links]
-            results = await asyncio.gather(*tasks)
-            for res in results:
-                proxies.update(res)
-    except Exception as e:
-        print(f"⚠️ Yandex error: {e}")
+    retries = 0
+    while retries < 3:
+        try:
+            headers = {
+                "User-Agent": random.choice(USER_AGENTS),
+                "X-Forwarded-For": ".".join(map(str, (random.randint(0, 255) for _ in range(4))))
+            }
+            await asyncio.sleep(random.uniform(2, 5))
+            async with session.get(
+                url,
+                params=params,
+                headers=headers,
+                timeout=15,
+                allow_redirects=False
+            ) as response:
+                if response.status in [302, 403] or "captcha" in response.url:
+                    retries += 1
+                    await asyncio.sleep(10)
+                    continue
+                response.raise_for_status()
+                soup = BeautifulSoup(await response.text(), "html.parser")
+                links = [a["href"] for a in soup.select(".link__url")[:20]]
+                print(f"🔍 Found {len(links)} Yandex links")
+                tasks = [download_proxies(session, link) for link in links]
+                results = await asyncio.gather(*tasks)
+                for res in results:
+                    proxies.update(res)
+                break
+        except Exception as e:
+            print(f"⚠️ Yandex error: {e}")
+            retries += 1
     return proxies
 
 async def fetch_proxies():
     proxies = set()
     async with aiohttp.ClientSession() as session:
         if PROXY_SOURCES:
-            tasks = [download_proxies(session, url) for url in PROXY_SOURCES]
+            tasks = []
+            for url in PROXY_SOURCES:
+                await asyncio.sleep(random.uniform(0.5, 1.5))
+                tasks.append(download_proxies(session, url))
             results = await asyncio.gather(*tasks)
             for res in results:
                 proxies.update(res)
@@ -179,8 +189,9 @@ async def fetch_proxies():
                 continue
             proxies.update(result)
         
+        proxies = list({proxy.split('@')[-1] if '@' in proxy else proxy for proxy in proxies})
         print(f"✅ Total unique proxies: {len(proxies)}")
-        return list(proxies)
+        return proxies
 
 async def download_proxies(session, url):
     try:
