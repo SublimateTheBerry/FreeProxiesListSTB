@@ -4,12 +4,22 @@ import aiohttp
 from aiohttp_socks import ProxyConnector
 from bs4 import BeautifulSoup
 import re
+import random
+import time
 from datetime import datetime
 
 PROXY_TIMEOUT = 10
 TEST_URL = "https://httpbin.org/ip"
 PROXY_SOURCES = os.getenv("PROXY_SOURCES", "").split(",")
-USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+
+USER_AGENTS = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Edge/119.0.0.0 Safari/12345",
+    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 13; SM-S901U) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.0.0 Mobile Safari/537.36"
+]
 
 OUTPUT_FILES = {
     "ALL": "All.txt",
@@ -19,29 +29,110 @@ OUTPUT_FILES = {
     "SOCKS5": "Socks5.txt",
 }
 
-async def search_duckduckgo():
+def get_random_headers():
+    return {
+        "User-Agent": random.choice(USER_AGENTS),
+        "Accept-Language": "en-US,en;q=0.9",
+        "Accept-Encoding": "gzip, deflate, br",
+        "Referer": "https://google.com",
+        "Connection": "keep-alive",
+        "Cache-Control": "max-age=0"
+    }
+
+async def search_duckduckgo(session):
     proxies = set()
     query = "free proxy list -inurl:(signup|login) site:*.org|*.net|*.com"
     url = f"https://duckduckgo.com/html/?q={query}"
     
-    async with aiohttp.ClientSession() as session:
-        try:
-            response = await session.get(
-                url,
-                headers={"User-Agent": USER_AGENT},
-                timeout=15
-            )
-            response.raise_for_status()
-            soup = BeautifulSoup(await response.text(), "html.parser")
-            links = [a["href"] for a in soup.select("a.result__url")[:10]]
-            print(f"🔍 Found {len(links)} DuckDuckGo links")
-            
-            tasks = [download_proxies(session, link) for link in links]
-            results = await asyncio.gather(*tasks)
-            for res in results:
-                proxies.update(res)
-        except Exception as e:
-            print(f"⚠️ DuckDuckGo error: {e}")
+    try:
+        headers = get_random_headers()
+        await asyncio.sleep(random.uniform(1, 3))
+        
+        response = await session.get(url, headers=headers, timeout=15)
+        response.raise_for_status()
+        soup = BeautifulSoup(await response.text(), "html.parser")
+        links = [a["href"] for a in soup.select("a.result__url")[:10]]
+        print(f"🔍 Found {len(links)} links from DuckDuckGo")
+        
+        tasks = [download_proxies(session, link) for link in links]
+        results = await asyncio.gather(*tasks)
+        for res in results:
+            proxies.update(res)
+    except Exception as e:
+        print(f"⚠️ DuckDuckGo error: {e}")
+    
+    return proxies
+
+async def search_google(session):
+    proxies = set()
+    query = "free proxy list -inurl:(signup|login) site:*.org|*.net|*.com"
+    params = {
+        "q": query.replace(" ", "+"),
+        "num": "10",
+        "gl": random.choice(["US", "DE", "FR", "GB"]),
+        "hl": random.choice(["en", "ru", "de"]),
+        "safe": "off",
+        "start": random.randint(0, 20)
+    }
+    url = "https://www.google.com/search"
+    
+    try:
+        headers = get_random_headers()
+        await asyncio.sleep(random.uniform(1, 3))
+        
+        response = await session.get(
+            url,
+            params=params,
+            headers=headers,
+            timeout=15
+        )
+        response.raise_for_status()
+        soup = BeautifulSoup(await response.text(), "html.parser")
+        links = [a["href"] for a in soup.select("a.yuRUbf")[:10]]
+        print(f"🔍 Found {len(links)} links from Google")
+        
+        tasks = [download_proxies(session, link) for link in links]
+        results = await asyncio.gather(*tasks)
+        for res in results:
+            proxies.update(res)
+    except Exception as e:
+        print(f"⚠️ Google error: {e}")
+    
+    return proxies
+
+async def search_yandex(session):
+    proxies = set()
+    query = "free proxy list -site:signup -site:login"
+    params = {
+        "text": query.replace(" ", "+"),
+        "numdoc": "10",
+        "lr": random.choice(["1", "2", "3"]),
+        "p": random.randint(0, 50),
+        "msid": f"yandex_search_{int(time.time())}"
+    }
+    url = "https://yandex.ru/search/"
+    
+    try:
+        headers = get_random_headers()
+        await asyncio.sleep(random.uniform(1, 3))
+        
+        response = await session.get(
+            url,
+            params=params,
+            headers=headers,
+            timeout=15
+        )
+        response.raise_for_status()
+        soup = BeautifulSoup(await response.text(), "html.parser")
+        links = [a["href"] for a in soup.select(".link__url")[:10]]
+        print(f"🔍 Found {len(links)} links from Yandex")
+        
+        tasks = [download_proxies(session, link) for link in links]
+        results = await asyncio.gather(*tasks)
+        for res in results:
+            proxies.update(res)
+    except Exception as e:
+        print(f"⚠️ Yandex error: {e}")
     
     return proxies
 
@@ -49,19 +140,27 @@ async def fetch_proxies():
     proxies = set()
     
     async with aiohttp.ClientSession() as session:
-        tasks = []
-        for url in PROXY_SOURCES:
-            tasks.append(download_proxies(session, url))
+        if PROXY_SOURCES:
+            tasks = [download_proxies(session, url) for url in PROXY_SOURCES]
+            results = await asyncio.gather(*tasks)
+            for res in results:
+                proxies.update(res)
+            print(f"✅ Collected {len(proxies)} proxies from sources")
         
-        results = await asyncio.gather(*tasks)
-        for res in results:
-            proxies.update(res)
+        search_tasks = [
+            search_duckduckgo(session),
+            search_google(session),
+            search_yandex(session)
+        ]
         
-        print(f"✅ Collected {len(proxies)} proxies from sources")
+        search_results = await asyncio.gather(*search_tasks, return_exceptions=True)
         
-        duckduckgo_proxies = await search_duckduckgo()
-        proxies.update(duckduckgo_proxies)
+        for result in search_results:
+            if isinstance(result, Exception):
+                continue
+            proxies.update(result)
         
+        print(f"✅ Total unique proxies: {len(proxies)}")
         return list(proxies)
 
 async def download_proxies(session, url):
@@ -82,7 +181,7 @@ async def download_proxies(session, url):
                 found = set(re.findall(pattern, text))
                 return found
     except Exception as e:
-        print(f"⚠️ Download error {url}: {str(e)[:50]}")
+        print(f"⚠️ Download error for {url}: {str(e)[:50]}")
     
     return set()
 
@@ -107,15 +206,14 @@ def parse_json_proxies(data):
 async def check_proxy(session, proxy):
     valid_protocols = []
     proxy_url = proxy.split('@')[-1] if '@' in proxy else proxy
-    ip_port = proxy_url.strip()
     
     async def test_protocol(proto):
         try:
             connector = None
             if proto.startswith('socks'):
-                connector = ProxyConnector.from_url(f"{proto}://{ip_port}", limit=0)
+                connector = ProxyConnector.from_url(f"{proto}://{proxy_url}", limit=0)
             else:
-                connector = ProxyConnector.from_url(f"http://{ip_port}", limit=0)
+                connector = ProxyConnector.from_url(f"http://{proxy_url}", limit=0)
             
             async with aiohttp.ClientSession(connector=connector, timeout=aiohttp.ClientTimeout(total=PROXY_TIMEOUT)) as test_session:
                 async with test_session.get(TEST_URL) as resp:
@@ -162,12 +260,12 @@ async def sort_and_save_proxies(proxies):
         f.write(str(len(sorted_proxies["ALL"])))
 
 async def main():
-    print("🚀 Starting proxy scraper...")
+    print("🚀 Starting proxy collector...")
     proxies = await fetch_proxies()
     if proxies:
         await sort_and_save_proxies(proxies)
     else:
-        print("⚠️ No proxies found!")
+        print("⚠️ Proxies not found!")
     print("🎉 Done!")
 
 if __name__ == "__main__":
