@@ -82,19 +82,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   <div class="container">
     <h1>Top Proxies by Speed</h1>
     
-    <!-- HTTP Proxies -->
-    <div class="proxy-category" id="http-proxies">
-      <div class="proxy-header">HTTP Proxies</div>
+    <!-- HTTP/HTTPS Proxies -->
+    <div class="proxy-category" id="http-https-proxies">
+      <div class="proxy-header">HTTP/HTTPS Proxies</div>
       <ul class="proxy-list">
-        {http_list}
-      </ul>
-    </div>
-    
-    <!-- HTTPS Proxies -->
-    <div class="proxy-category" id="https-proxies">
-      <div class="proxy-header">HTTPS Proxies</div>
-      <ul class="proxy-list">
-        {https_list}
+        {http_https_list}
       </ul>
     </div>
     
@@ -147,9 +139,10 @@ def generate_list_items(proxy_results):
     for proxy_info in proxy_results:
         proxy = proxy_info.get("proxy", "")
         speed = proxy_info.get("speed", 0)
+        # Отображаем текст с информацией о скорости, но копируется только "ip:port"
         item_html = f'''<li class="proxy-item">
   <span class="proxy-text">{proxy} - {speed}ms</span>
-  <button class="copy-btn" data-text="{proxy} - {speed}ms">Copy</button>
+  <button class="copy-btn" data-text="{proxy}">Copy</button>
 </li>'''
         items.append(item_html)
     return "\n".join(items)
@@ -162,16 +155,20 @@ def main():
         print(f"Ошибка чтения speed_results.json: {e}")
         results = {}
 
-    http_list = generate_list_items(results.get("http", []))
-    https_list = generate_list_items(results.get("https", []))
+    # Объединяем HTTP и HTTPS прокси
+    combined_http_https = results.get("http", []) + results.get("https", [])
+    # При необходимости сортируем по скорости (возрастанию)
+    combined_http_https.sort(key=lambda x: x.get("speed", float('inf')))
+    http_https_list = generate_list_items(combined_http_https)
+
+    # SOCKS4 и SOCKS5 оставляем в отдельных категориях
     socks4_list = generate_list_items(results.get("socks4", []))
     socks5_list = generate_list_items(results.get("socks5", []))
     
     last_update = datetime.now().strftime("%B %d, %Y, %H:%M")
     
     html_content = HTML_TEMPLATE.format(
-        http_list=http_list,
-        https_list=https_list,
+        http_https_list=http_https_list,
         socks4_list=socks4_list,
         socks5_list=socks5_list,
         last_update=last_update
@@ -180,7 +177,7 @@ def main():
     with open("index.html", "w") as f:
         f.write(html_content)
     
-    print("index.html обновлён с последними результатами тестирования скорости прокси.")
+    print("index.html обновлен с последними результатами тестирования скорости прокси.")
 
 if __name__ == "__main__":
     main()
