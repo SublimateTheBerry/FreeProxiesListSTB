@@ -7,7 +7,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Top Proxies by Speed</title>
+  <title>FreeProxiesSTB - Sorted by Speed</title>
   <style>
     /* Global Styles */
     body {{
@@ -80,7 +80,10 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 </head>
 <body>
   <div class="container">
-    <h1>Top Proxies by Speed</h1>
+    <h1>
+  <a href="https://github.com/SublimateTheBerry/FreeProxiesListSTB" style="color: #ffffff; text-decoration: none;">FreeProxiesSTB - Sorted by Speed</a>
+    </h1>
+
     
     <!-- HTTP/HTTPS Proxies -->
     <div class="proxy-category" id="http-https-proxies">
@@ -111,7 +114,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       Last update: {last_update}
     </div>
     <div class="copyright">
-      &copy; 2025 Your Company. All rights reserved.
+      &copy; 2025 <a href="https://github.com/SublimateTheBerry" style="color: #888; font-weight: bold; text-decoration: none;">SublimateTheBerry</a>
     </div>
   </div>
   
