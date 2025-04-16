@@ -1,4 +1,4 @@
-name: Proxy Scraper & Sorter
+name: Proxy Scraper & Deploy Pages
 
 on:
   schedule:
@@ -43,6 +43,16 @@ jobs:
   github_pages:
     needs: scrape_and_sort
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: "pages"
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -54,16 +64,19 @@ jobs:
 
       - name: Run proxy speed tests and update site
         run: |
-          # Скрипт speed_test.py должен протестировать все прокси, кроме All.txt,
-          # а затем записать результаты в нужный файл (например, в index.html)
+          # Скрипт speed_test.py проводит тестирование скорости для всех файлов,
+          # кроме All.txt; затем update_gh_pages.py генерирует новый index.html.
           python3 speed_test.py --exclude All.txt
-          # Скрипт update_gh_pages.py обновит HTML-страницу (index.html) для GitHub Pages
           python3 update_gh_pages.py
 
-      - name: Deploy updated site to GitHub Pages
-        run: |
-          git config --global user.name "github-actions"
-          git config --global user.email "actions@github.com"
-          git add index.html
-          git commit -m "Update GitHub Pages: $(date +'%Y-%m-%d %H:%M')"
-          git push origin HEAD:gh-pages
+      - name: Setup GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: index.html
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
