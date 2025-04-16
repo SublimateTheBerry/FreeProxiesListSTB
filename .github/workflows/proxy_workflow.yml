@@ -69,13 +69,18 @@ jobs:
           python3 speed_test.py --exclude All.txt
           python3 update_gh_pages.py
 
+      - name: Prepare site folder
+        run: |
+          mkdir public
+          mv index.html public/
+
       - name: Setup GitHub Pages
         uses: actions/configure-pages@v5
 
       - name: Upload pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: index.html
+          path: 'public'
 
       - name: Deploy to GitHub Pages
         id: deployment
