@@ -12,12 +12,12 @@
 
 ## 📊 Last Update Statistics
 - **New Proxies Added**: 17
-- **Last Update**: 2025-08-23 04:25 UTC
+- **Last Update**: 2025-08-23 04:44 UTC
 - **Total Proxies**:
   - HTTP: 14
-  - HTTPS: 16
+  - HTTPS: 11
   - SOCKS4: 0
-  - SOCKS5: 0
+  - SOCKS5: 1
 
 ## 📜 License 
 By using this repository, you automatically agree:
