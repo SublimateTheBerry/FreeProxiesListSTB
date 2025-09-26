@@ -11,13 +11,13 @@
 - **All Proxies**: [All.txt](https://raw.githubusercontent.com/SublimateTheBerry/FreeProxiesListSTB/main/All.txt)
 
 ## 📊 Last Update Statistics
-- **New Proxies Added**: 5
-- **Last Update**: 2025-09-26 17:40 UTC
+- **New Proxies Added**: 8
+- **Last Update**: 2025-09-26 18:28 UTC
 - **Total Proxies**:
-  - HTTP: 1
-  - HTTPS: 3
+  - HTTP: 4
+  - HTTPS: 7
   - SOCKS4: 0
-  - SOCKS5: 1
+  - SOCKS5: 0
 
 ## 📜 License 
 By using this repository, you automatically agree:
